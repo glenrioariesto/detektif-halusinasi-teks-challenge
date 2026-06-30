@@ -1,18 +1,18 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
-interface Wave {
+interface RainDrop {
   x: number;
   y: number;
-  radius: number;
-  maxRadius: number;
   speed: number;
-  intensity: number;
+  chars: string[];
+  opacity: number;
 }
 
 export function InteractiveGridBg() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const mouseRef = useRef({ x: -1000, y: -1000, targetX: -1000, targetY: -1000 });
-  const wavesRef = useRef<Wave[]>([]);
+  const dropsRef = useRef<RainDrop[]>([]);
+  const glitchTimerRef = useRef(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -26,6 +26,30 @@ export function InteractiveGridBg() {
     const resizeCanvas = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+
+      // Initialize Matrix Rain drops
+      const fontSize = 14;
+      const columns = Math.ceil(canvas.width / fontSize) + 1;
+      const arr: RainDrop[] = [];
+      const glyphs = 'abcdefghijklmnopqrstuvwxyz0123456789+=*&?#@$%/\\';
+
+      for (let i = 0; i < columns; i++) {
+        // Build random char sequence
+        const charLen = 8 + Math.floor(Math.random() * 12);
+        const chars = [];
+        for (let c = 0; c < charLen; c++) {
+          chars.push(glyphs[Math.floor(Math.random() * glyphs.length)]);
+        }
+
+        arr.push({
+          x: i * fontSize,
+          y: Math.random() * -canvas.height, // start above viewport
+          speed: 1.5 + Math.random() * 3,
+          chars,
+          opacity: 0.15 + Math.random() * 0.4
+        });
+      }
+      dropsRef.current = arr;
     };
 
     window.addEventListener('resize', resizeCanvas);
@@ -44,130 +68,120 @@ export function InteractiveGridBg() {
     };
 
     const handleClick = (e: MouseEvent) => {
-      // Don't spawn ripples if clicking on a button
       const target = e.target as HTMLElement;
       if (target.closest('button') || target.closest('a')) return;
 
-      wavesRef.current.push({
-        x: e.clientX,
-        y: e.clientY,
-        radius: 0,
-        maxRadius: 280,
-        speed: 6,
-        intensity: 1.0,
-      });
-    };
-
-    const handleTouchStart = (e: TouchEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('button') || target.closest('a')) return;
-
-      if (e.touches.length > 0) {
-        wavesRef.current.push({
-          x: e.touches[0].clientX,
-          y: e.touches[0].clientY,
-          radius: 0,
-          maxRadius: 240,
-          speed: 5,
-          intensity: 1.0,
-        });
-      }
+      // Trigger full screen glitch scramble for 25 frames
+      glitchTimerRef.current = 25;
     };
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('touchmove', handleTouchMove);
     window.addEventListener('click', handleClick);
-    window.addEventListener('touchstart', handleTouchStart);
 
-    // Grid spacing parameters
-    const spacing = 42;
+    const glyphs = 'abcdefghijklmnopqrstuvwxyz0123456789+=*&?#@$%/\\';
+    const fontSize = 14;
 
     const draw = () => {
-      // Render base background
-      ctx.fillStyle = '#020502';
+      // Dark trail background
+      ctx.fillStyle = 'rgba(6, 5, 17, 0.22)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Smooth mouse coordinates interpolation
       const mouse = mouseRef.current;
       if (mouse.x === -1000) {
         mouse.x = mouse.targetX;
         mouse.y = mouse.targetY;
       } else {
-        mouse.x += (mouse.targetX - mouse.x) * 0.12;
-        mouse.y += (mouse.targetY - mouse.y) * 0.12;
+        mouse.x += (mouse.targetX - mouse.x) * 0.15;
+        mouse.y += (mouse.targetY - mouse.y) * 0.15;
       }
 
-      // Update waves
-      const waves = wavesRef.current;
-      for (let i = waves.length - 1; i >= 0; i--) {
-        const w = waves[i];
-        w.radius += w.speed;
-        w.intensity -= 0.02;
-        if (w.radius > w.maxRadius || w.intensity <= 0) {
-          waves.splice(i, 1);
+      if (glitchTimerRef.current > 0) {
+        glitchTimerRef.current--;
+      }
+
+      ctx.font = `${fontSize}px monospace`;
+      ctx.textAlign = 'center';
+
+      const drops = dropsRef.current;
+      for (const d of drops) {
+        // Fall down
+        d.y += d.speed;
+        if (d.y > canvas.height + 100) {
+          d.y = Math.random() * -300 - 50;
+          d.speed = 1.5 + Math.random() * 3;
         }
-      }
 
-      // Draw grid of boxes
-      const cols = Math.ceil(canvas.width / spacing) + 1;
-      const rows = Math.ceil(canvas.height / spacing) + 1;
+        // Render characters downwards
+        for (let j = 0; j < d.chars.length; j++) {
+          const cy = d.y - j * fontSize;
+          if (cy < -20 || cy > canvas.height + 20) continue;
 
-      for (let c = 0; c < cols; c++) {
-        for (let r = 0; r < rows; r++) {
-          const originX = c * spacing;
-          const originY = r * spacing;
-
-          // Calculate displacement from mouse
-          let drawX = originX;
-          let drawY = originY;
-          let brightness = 0;
-
-          const dx = mouse.x - originX;
-          const dy = mouse.y - originY;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          // Mouse Attraction / Follow field
-          const maxDist = 180;
-          if (dist < maxDist) {
-            const force = (maxDist - dist) / maxDist;
-            // Pull coordinates slightly towards the cursor
-            drawX += dx * force * 0.16;
-            drawY += dy * force * 0.16;
-            brightness += force * 0.45;
+          // Randomize some chars in columns
+          if (Math.random() < 0.05) {
+            d.chars[j] = glyphs[Math.floor(Math.random() * glyphs.length)];
           }
 
-          // Wave ripples field
-          for (const w of waves) {
-            const wdx = w.x - originX;
-            const wdy = w.y - originY;
-            const wdist = Math.sqrt(wdx * wdx + wdy * wdy);
-            const diff = Math.abs(wdist - w.radius);
+          // Calculate distance to mouse cursor
+          const dx = mouse.x - d.x;
+          const dy = mouse.y - cy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
 
-            const waveWidth = 35;
-            if (diff < waveWidth) {
-              const waveForce = (waveWidth - diff) / waveWidth * w.intensity;
-              // Push or pull coordinates along the ripple wave vector
-              drawX += (wdx / (wdist || 1)) * waveForce * 12;
-              drawY += (wdy / (wdist || 1)) * waveForce * 12;
-              brightness += waveForce * 0.8;
+          let drawX = d.x;
+          let drawY = cy;
+          let color = `rgba(244, 63, 94, ${d.opacity * (1 - j / d.chars.length)})`; // default rose pink
+          let scale = 1;
+
+          // Glitch scramble timer triggered on click
+          if (glitchTimerRef.current > 0) {
+            color = `rgba(6, 182, 212, ${Math.random() * 0.8})`; // glitch cyan
+            drawX += (Math.random() - 0.5) * 4;
+            drawY += (Math.random() - 0.5) * 4;
+            if (Math.random() < 0.2) {
+              d.chars[j] = glyphs[Math.floor(Math.random() * glyphs.length)];
             }
           }
 
-          // Draw the box
-          brightness = Math.min(1, brightness);
-          const boxSize = 8 + brightness * 8; // expand on hover/ripple
-          const opacity = 0.04 + brightness * 0.55;
-
-          // Green matrix colors
-          ctx.strokeStyle = `rgba(16, 185, 129, ${opacity})`;
-          ctx.lineWidth = 1 + brightness;
-          ctx.strokeRect(drawX - boxSize / 2, drawY - boxSize / 2, boxSize, boxSize);
-
-          if (brightness > 0.3) {
-            ctx.fillStyle = `rgba(52, 211, 153, ${brightness * 0.3})`;
-            ctx.fillRect(drawX - 1.5, drawY - 1.5, 3, 3);
+          // Warp/Glitch around cursor
+          const warpRadius = 140;
+          if (dist < warpRadius) {
+            const force = (warpRadius - dist) / warpRadius;
+            // Push characters outward to create an interactive "shadow bubble"!
+            drawX -= (dx / (dist || 1)) * force * 18;
+            drawY -= (dy / (dist || 1)) * force * 18;
+            
+            // Brighten up and change color to cyan when near cursor
+            color = `rgba(6, 182, 212, ${0.15 + force * 0.85})`;
+            scale = 1.0 + force * 0.2;
+            
+            if (Math.random() < force * 0.3) {
+              d.chars[j] = glyphs[Math.floor(Math.random() * glyphs.length)];
+            }
           }
+
+          // Draw the char
+          ctx.fillStyle = color;
+          ctx.save();
+          ctx.translate(drawX, drawY);
+          ctx.scale(scale, scale);
+          ctx.fillText(d.chars[j], 0, 0);
+          ctx.restore();
         }
+      }
+
+      // Draw cursor scanning reticle overlay
+      if (mouse.x > 0 && mouse.x < canvas.width) {
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.25)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(mouse.x, mouse.y, 40, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        ctx.arc(mouse.x, mouse.y, 60, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
 
       animationFrameId = requestAnimationFrame(draw);
@@ -180,7 +194,6 @@ export function InteractiveGridBg() {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('click', handleClick);
-      window.removeEventListener('touchstart', handleTouchStart);
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
