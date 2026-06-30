@@ -3,8 +3,6 @@ import { useGameState } from './hooks/useGameState';
 import { SplashPage } from './pages/splash/SplashPage';
 import { ArenaPage } from './pages/arena/ArenaPage';
 import { ResultPage } from './pages/result/ResultPage';
-import { PortraitWarning } from './components/PortraitWarning';
-
 export default function App() {
   const {
     pageView,
@@ -28,10 +26,7 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#020502] bg-grid-matrix flex flex-col antialiased text-emerald-100 relative">
-      {/* Landscape phone warning banner */}
-      <PortraitWarning />
-
-      {/* Pages Router */}
+      {/* Screen switcher */}
       {pageView === 'splash' && (
         <SplashPage onStart={startInvestigation} />
       )}
