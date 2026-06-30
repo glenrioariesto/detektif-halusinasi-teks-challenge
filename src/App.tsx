@@ -27,7 +27,7 @@ export default function App() {
   } = useGameState();
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-[#040804] bg-grid-matrix flex flex-col antialiased text-emerald-100 relative">
+    <div className="h-screen w-screen overflow-hidden bg-[#020502] bg-grid-matrix flex flex-col antialiased text-emerald-100 relative">
       {/* Landscape phone warning banner */}
       <PortraitWarning />
 
