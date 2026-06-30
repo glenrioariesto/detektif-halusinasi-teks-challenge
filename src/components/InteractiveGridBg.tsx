@@ -83,8 +83,8 @@ export function InteractiveGridBg() {
     const fontSize = 14;
 
     const draw = () => {
-      // Dark trail background
-      ctx.fillStyle = 'rgba(6, 5, 17, 0.22)';
+      // Dark trail background matching body #040804
+      ctx.fillStyle = 'rgba(4, 8, 4, 0.22)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const mouse = mouseRef.current;
@@ -129,12 +129,13 @@ export function InteractiveGridBg() {
 
           let drawX = d.x;
           let drawY = cy;
-          let color = `rgba(244, 63, 94, ${d.opacity * (1 - j / d.chars.length)})`; // default rose pink
+          // Emerald Green as matrix rain default color
+          let color = `rgba(16, 185, 129, ${d.opacity * (1 - j / d.chars.length)})`;
           let scale = 1;
 
-          // Glitch scramble timer triggered on click
+          // Glitch scramble timer triggered on click (Neon Green/Mint)
           if (glitchTimerRef.current > 0) {
-            color = `rgba(6, 182, 212, ${Math.random() * 0.8})`; // glitch cyan
+            color = `rgba(52, 211, 153, ${Math.random() * 0.8})`;
             drawX += (Math.random() - 0.5) * 4;
             drawY += (Math.random() - 0.5) * 4;
             if (Math.random() < 0.2) {
@@ -150,8 +151,8 @@ export function InteractiveGridBg() {
             drawX -= (dx / (dist || 1)) * force * 18;
             drawY -= (dy / (dist || 1)) * force * 18;
             
-            // Brighten up and change color to cyan when near cursor
-            color = `rgba(6, 182, 212, ${0.15 + force * 0.85})`;
+            // Brighten up and change color to light mint green when near cursor
+            color = `rgba(52, 211, 153, ${0.15 + force * 0.85})`;
             scale = 1.0 + force * 0.2;
             
             if (Math.random() < force * 0.3) {
@@ -169,9 +170,9 @@ export function InteractiveGridBg() {
         }
       }
 
-      // Draw cursor scanning reticle overlay
+      // Draw cursor scanning reticle overlay (Neon Green/Mint)
       if (mouse.x > 0 && mouse.x < canvas.width) {
-        ctx.strokeStyle = 'rgba(6, 182, 212, 0.25)';
+        ctx.strokeStyle = 'rgba(52, 211, 153, 0.25)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(mouse.x, mouse.y, 40, 0, Math.PI * 2);
